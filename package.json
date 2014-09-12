@@ -1,0 +1,9 @@
+{
+  "name": "scaling-robot",
+  "version": "0.0.1",
+  "description": "webpage scraping socket.io app",
+  "dependencies": {
+    "express": "^4.9.0",
+    "socket.io": "^1.1.0"
+  }
+}
