@@ -22,38 +22,13 @@ io.on('connection', function(socket){
 // On message event
 	socket.on('message', function(msg){
 		io.emit('searching', msg);
-		console.log('scraping: ' + msg);
+		// TODO Add + between words in the search string
+		var scrapeSearchResult = 'http://ubc.summon.serialssolutions.com/api/search?q='+msg+'&l=en';
+		var scrapeHoldingsInfo = 'http://webcat1.library.ubc.ca/vwebv/holdingsInfo?bibId=7245108'
 
-		var scrapeUrl = 'http://ubc.summon.serialssolutions.com/search?s.cmd=addFacetValueFilters%28ContentType%2CNewspaper+Article%3At%29&spellcheck=true&s.q=hackers+and+painters';
-		// scrapeUrl = msg.toString();
-
-		var options = {
-    		method: 'GET',
-    		url: scrapeUrl,
-    		followAllRedirects: false,
-    		jar: true
-  		};
-
-		// scraperjs.DynamicScraper.create()
-		// .request(options)
-		// // stops the promise chain
-		// .onError(function(err) {
-		// 	console.log("Error is " + err);
-		// })
-		// .then(function(utils) {
-  //   	console.log("Scraper response is " + utils.scraper.response);
-  //   	})
-	 //    .scrape(function($) {
-	 //        return $(".title a").map(function() {
-	 //            return $(this).text();
-	 //        }).get();
-	 //    }, function(news) {
-	 //        console.log(news);
-	 //    });
-
-	    // old school request
+		// old school request
 	    	request({
-			url: scrapeUrl,
+			url: scrapeSearchResult,
 			headers: {
 				'User-Agent': 'firefox'
 			}
@@ -61,10 +36,34 @@ io.on('connection', function(socket){
 				if(!error && response.statusCode == 200) {
 					console.log("Response body is " + body);
 				} else {
-					console.log(error);
+					console.log("Error is " + error);
 				}
 			}
 			);
+
+		var options = {
+    		method: 'GET',
+    		url: scrapeHoldingsInfo,
+    		followAllRedirects: false,
+    		jar: true
+  		};
+
+		scraperjs.DynamicScraper.create(scrapeHoldingsInfo)
+		// stops the promise chain
+		.onError(function(err) {
+			console.log("Error is " + err);
+		})
+		.then(function(utils) {
+    	console.log("Scraper response is " + utils.scraper.response);
+    	})
+	    .scrape(function($) {
+	        return $(".title a").map(function() {
+	            return $(this).text();
+	        }).get();
+	    }, function(news) {
+	        console.log(news);
+	    });
+
 	});
 
 // On disconnect event
