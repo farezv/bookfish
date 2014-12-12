@@ -24,7 +24,7 @@
 			var socket = io();
 			$('form').submit(function(){
 				// Emit 'search' event to server
-				socket.emit('message', $('#m').val());
+				socket.emit('search', $('#m').val());
 				$('#m').val('');
 				return false;
 			});
