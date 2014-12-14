@@ -25,7 +25,7 @@ io.on('connection', function(socket){
 	socket.on('search', function(searchText){
 		io.emit('message', searchText);
 		console.log('search: ' + searchText);
-		// TODO Add + between words in the search string
+		// TODO Add '+' between words in the search string
 		var searchQuery = urls.searchQuery+searchText+'&l=en';
 		var simpleSearchQuery = urls.simpleSearchQuery + searchText + '&searchCode=GKEY^*&limitTo=none&recCount=10&searchType=1&page.search.search.button=Search'
 
@@ -36,14 +36,13 @@ io.on('connection', function(socket){
 		}, function(error, response, body) {
 			if(!error && response.statusCode == 200) {
 				console.log("Successful response");
-				parseHtml(body);
+				var bookresults = parseHtml(body);
+				socket.emit('results', bookresults);
 			} else {
 				console.log("Error is " + error);
 			}
 		}
 		);
-
-
 	});
 
 // On disconnect event
@@ -55,29 +54,42 @@ io.on('connection', function(socket){
 /* Search result is in a div named resultListTextCell with 5 lines each corresponding to HoldingsLink, Author, Publisher, CallNumber and Status */
 function parseHtml(body) {
 	var bookResults = [];
-	var holdingsLink, author, publisher, callNumber, status;
+	var br, searchTitle, bibId, author, publisher, callNumber, status;
 
 	$ = cheerio.load(body);
 
 	$('.resultListTextCell').each(function() {
-		console.log($(this).text());
-	})
-
-	var parser = new htmlparser.Parser({
-		onopentag: function(name, attribs) {
-			if(name == 'div' && attribs.class == 'resultListTextCell') {
-				// console.log('Found a bookresult!');
-			}
-		},
-		ontext: function(text) {
-			// console.log('-->', text);
-		},
-		onclosetag:function(tagname) {
-
-		}
+		// Constructing search result object by parsing various metadata
+		searchTitle = $(this).find('.line1Link').text();
+		// Only care about bibId since the rest of the url can be constructed when needed
+		bibId = $(this).find('a').attr('href');
+		bibId = bibId.substr(bibId.lastIndexOf('=') + 1);
+		
+		author = $(this).find('.line2Link').text();
+		publisher = $(this).find('.line3Link').text();
+		// Ideally, line 4 is the Call Number line
+		var line4 = $(this).find('.line4Link').text();
+		callNumber = checkStringPrefix(line4.trim(), 'Call Number');
+		// but when it's not, line 4 is the Status line
+		if(callNumber == ' ') {
+			status = line4;
+		} else status = $(this).find('.line5Link').text();
+		// Finally create book result object
+		br = new bookresult(searchTitle.trim(), bibId.trim(), author.trim(), publisher.trim(), callNumber.trim(), status.trim());
+		bookResults.push(br);
 	});
-	parser.write(body);
-	parser.end();
+
+	console.log(bookResults);
+	return bookResults;
+}
+
+/* Check to see if the dataString contains keyword in the beginning.  */
+function checkStringPrefix(dataString, keyword) {
+	// console.log('dataString: ' + dataString + ' & keyword: ' + keyword);
+	// console.log(dataString.substr(0, keyword.length));
+	if(dataString.substr(0, keyword.length) == keyword) {
+		return dataString;
+	} else return ' ';
 }
 
 http.listen(4000, function(){
