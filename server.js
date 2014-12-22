@@ -24,8 +24,10 @@ io.on('connection', function(socket){
 	// On message event
 	socket.on('search', function(searchText){
 		io.emit('message', searchText);
+		// Add '+' between words in the search string
+		searchText = searchText.replace(/\s/g, "+");
 		console.log('search: ' + searchText);
-		// TODO Add '+' between words in the search string
+		// Build url
 		var searchQuery = urls.searchQuery+searchText+'&l=en';
 		var simpleSearchQuery = urls.simpleSearchQuery + searchText + '&searchCode=GKEY^*&limitTo=none&recCount=10&searchType=1&page.search.search.button=Search'
 
