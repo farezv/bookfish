@@ -68,14 +68,21 @@ function parseHtml(body) {
 		bibId = bibId.substr(bibId.lastIndexOf('=') + 1);
 		
 		author = $(this).find('.line2Link').text();
+		author = author.replace("Author:", "");
+
 		publisher = $(this).find('.line3Link').text();
+		publisher = publisher.replace("Publisher:", "");
+		
 		// Ideally, line 4 is the Call Number line
 		var line4 = $(this).find('.line4Link').text();
 		callNumber = checkStringPrefix(line4.trim(), 'Call Number');
+		callNumber = callNumber.replace("Call Number:", "");
 		// but when it's not, line 4 is the Status line
 		if(callNumber == ' ') {
 			status = line4;
 		} else status = $(this).find('.line5Link').text();
+		status = status.replace("Status, Library Location:", "");
+		
 		// Finally create book result object
 		br = new bookresult(searchTitle.trim(), bibId.trim(), author.trim(), publisher.trim(), callNumber.trim(), status.trim());
 		bookResults.push(br);
