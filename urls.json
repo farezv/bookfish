@@ -1,0 +1,5 @@
+{
+	"holdingsInfo" : "http://webcat1.library.ubc.ca/vwebv/holdingsInfo?bibId=",
+	"simpleSearchQuery" : "http://webcat1.library.ubc.ca/vwebv/search?searchArg=",
+	"searchQuery" : "http://ubc.summon.serialssolutions.com/api/search?q="
+}
