@@ -5,6 +5,8 @@ var request = require('request');
 var cheerio = require('cheerio');
 var htmlparser = require('htmlparser2');
 var bookresult = require('./models/bookresult');
+var bookresultdetail = require('./models/bookresultdetail');
+var locinfo = require('./models/locinfo');
 var urls = require('./urls');
 var redis = require('redis');
 var redisClient;
@@ -26,31 +28,44 @@ io.on('connection', function(socket){
 	});
 
 	// On message event
-	socket.on('search', function(searchText){
+	socket.on('search', function(searchText) {
 		io.emit('message', searchText);
 
 		// Add '+' between words in the search string and save the original search terms
 		if(typeof(searchText) == 'string') {
-      searchText = searchText.replace(/\s/g, "+");
-    } else var searchTextPage = searchText;
+	      searchText = searchText.replace(/\s/g, "+");
+	    } else var searchTextPage = searchText;
 
 		var simpleSearchQuery = buildOriginalSearchUrl(searchText);
-    // If the message is a url, we're using it and scraping the next page
-    if(searchText.indexOf('http') > -1 ) {
-      simpleSearchQuery = searchText;
-    } else socket.emit('next', simpleSearchQuery);
-    console.log(simpleSearchQuery);
-    request({
-		url: simpleSearchQuery,
-		}, function(error, response, body) {
-			if(!error && response.statusCode == 200) {
-				console.log("html received!");
-				var bookresults = parseHtml(body);
-				socket.emit('results', bookresults);
-			} else {
-				console.log("Error is " + error);
-			}
-    });
+	    var isHoldingsInfo = false;
+
+	    // If the message is a holdingsInfo url, we're scraping a bookResult's details
+	    if(searchText.indexOf('holdingsInfo') > -1) {
+	    	simpleSearchQuery = searchText;
+	    	isHoldingsInfo = true;
+	    }
+	    // If the message is a url, we're using it and scraping the next page
+	    else if(searchText.indexOf('http') > -1 ) {
+	      simpleSearchQuery = searchText;
+	    } else socket.emit('next', simpleSearchQuery);
+	    console.log(simpleSearchQuery);
+	    
+	    request({
+			url: simpleSearchQuery,
+			}, function(error, response, body) {
+				if(!error && response.statusCode == 200) {
+					console.log("html received!");
+					if(isHoldingsInfo) {
+						var bookResultDetails = getBookResultDetails(body);
+						socket.emit('details', bookResultDetails);
+					} else {
+						var bookresults = getBookResults(body);
+						socket.emit('results', bookresults);
+					}	
+				} else {
+					console.log("Error is " + error);
+				}
+	    });
 	});
 
 // On disconnect event
@@ -79,7 +94,7 @@ function setupCache() {
 }
 
 /* Search result is in a div named resultListTextCell with 5 lines each corresponding to HoldingsLink, Author, Publisher, CallNumber and Status */
-function parseHtml(body) {
+function getBookResults(body) {
 	var bookResults = [];
 	var br, searchTitle, bibId, author, publisher, callNumber, status;
 
@@ -115,6 +130,54 @@ function parseHtml(body) {
 
 	//console.log(bookResults);
 	return bookResults;
+}
+
+
+/* Parses the book result details into clean json */
+function getBookResultDetails(body) {
+	var bookResultDetails;
+	var locInfoLines, locInfos, summary, notes, contents;
+	locInfoLines = [];
+	locInfos = [];
+
+	$ = cheerio.load(body);
+
+	// Build location info
+	$('.displayHoldings').each(function() {
+		$(this).find('.subfieldData').each(function(){
+			var data = $(this).text().trim().replace("Where is this?", "");
+			// console.log(data);
+			locInfoLines.push(data);
+		});
+	});
+
+	for(var i = 0 ; i < locInfoLines.length; i = i + 4) {
+		var li = new locinfo(locInfoLines[i], locInfoLines[i+1], locInfoLines[i+2], locInfoLines[i+3]);
+		locInfos.push(li);
+	}
+	
+	// Build summary, notes and contents
+	$('.bibTag').each(function(){
+		var key = $(this).find('.fieldLabelSpan').text();
+		if(key.indexOf('Summary') > -1) {
+			summary = $(this).find('.subfieldData').text().trim();
+		}
+		if(key.indexOf('Notes') > -1) {
+			notes = $(this).find('.subfieldData').text().trim();
+		}
+		else if(key.indexOf('Contents') > -1) {
+			contents = $(this).find('.subfieldData').text().trim();
+		}
+	});
+
+	bookResultDetails = new bookresultdetail(locInfos, summary, notes, contents);
+	return bookResultDetails;
+
+}
+
+/* Removes non alpha numeric characters */
+function cleanString(line) {
+	return line.replace("[","").replace("]","").replace("\"","").replace("'","");
 }
 
 function getNextUrl(body) {
