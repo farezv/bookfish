@@ -61,6 +61,10 @@ io.on('connection', function(socket){
 					} else {
 						var bookresults = getBookResults(body);
 						socket.emit('results', bookresults);
+						var loadNext = getNextUrl(body);
+						if(!(typeof loadNext === 'number') && loadNext.indexOf('recCount') > -1) {
+							// do nothing
+						} else if(typeof loadNext === 'number') socket.emit('next', false);
 					}	
 				} else {
 					console.log("Error is " + error);
