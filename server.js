@@ -136,7 +136,7 @@ function getBookResults(body) {
 /* Parses the book result details into clean json */
 function getBookResultDetails(body) {
 	var bookResultDetails;
-	var locInfoLines, locInfos, summary, notes, contents;
+	var locInfoLines, location, callNum, numItems, status, locInfos, summary, notes, contents;
 	locInfoLines = [];
 	locInfos = [];
 
@@ -144,17 +144,31 @@ function getBookResultDetails(body) {
 
 	// Build location info
 	$('.displayHoldings').each(function() {
-		$(this).find('.subfieldData').each(function(){
-			var data = $(this).text().trim().replace("Where is this?", "");
-			// console.log(data);
-			locInfoLines.push(data);
-		});
+		while(!location || !callNum || !numItems || !status) {
+			$(this).find('.bibTag').each(function(){	
+				var key = $(this).find('.fieldLabelSpan').text();
+				if(key.indexOf('Location:') > -1) {
+					location = $(this).find('.subfieldData').text().trim().replace("Where is this?", "");
+				}
+				else if(key.indexOf('Call Number:') > -1) {
+					callNum = $(this).find('.subfieldData').text().trim();
+				}
+				else if(key.indexOf('Number of Items:') > -1) {
+					numItems = $(this).find('.subfieldData').text().trim();
+				}
+				else if(key.indexOf('Status:') > -1) {
+					status = $(this).find('.subfieldData').text().trim();
+				}
+			});	
+		} 
+				var li = new locinfo(location, callNum, numItems, status);
+				location = null;
+				callNum = null;
+				numItems = null;
+				status = null;
+				console.log(li);
+				locInfos.push(li);
 	});
-
-	for(var i = 0 ; i < locInfoLines.length; i = i + 4) {
-		var li = new locinfo(locInfoLines[i], locInfoLines[i+1], locInfoLines[i+2], locInfoLines[i+3]);
-		locInfos.push(li);
-	}
 	
 	// Build summary, notes and contents
 	$('.bibTag').each(function(){
@@ -162,7 +176,7 @@ function getBookResultDetails(body) {
 		if(key.indexOf('Summary') > -1) {
 			summary = $(this).find('.subfieldData').text().trim();
 		}
-		if(key.indexOf('Notes') > -1) {
+		else if(key.indexOf('Notes') > -1) {
 			notes = $(this).find('.subfieldData').text().trim();
 		}
 		else if(key.indexOf('Contents') > -1) {
