@@ -29,3 +29,6 @@ node_modules
 
 # Project files
 urls.json
+
+# Jekyll generated files
+_site/
