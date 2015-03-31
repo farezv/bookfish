@@ -18,18 +18,18 @@ app.get('/', function(req, res){
 
 /* List all the events that are valid "on a connection" */
 io.on('connection', function(socket){
-	io.emit('response', "Connected to a scaling robot!");
   // On connection, record client type
 	socket.on('connection', function(msg){
 		console.log('connection: ' + msg);
-    // TODO figure out if cache is alive
-    // record type of client connected by
-    // incrementing vars stored in cache
+    // figure out if cache is alive
+    if(redisClient == null) setupCache();
 	});
 
 	// On message event
 	socket.on('search', function(searchText) {
-		io.emit('message', searchText);
+
+    // Cache searchText
+    if(redisClient != null) redisClient.set(searchText, "", redis.print); // blank values for now
 
 		// Add '+' between words in the search string and save the original search terms
 		if(typeof(searchText) == 'string') {
