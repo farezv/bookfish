@@ -1,6 +1,6 @@
 # general configuration
 url: http://farez.ca
-baseurl: ''
+baseurl: '/bookfish'
 
 # compass configuration
 compass:
